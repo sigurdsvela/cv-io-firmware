@@ -139,8 +139,8 @@ unsafe fn main() -> ! {
 
 	// Allocate buffer
 	const buffer_size: usize = 12;
-	let buffer1: [u16; buffer_size] = [0; buffer_size];
-	let buffer2: [u16; buffer_size] = [0; buffer_size];
+	let buffer1: [u16; 12] = [0; 12];
+	let buffer2: [u16; 12] = [0; 12];
 
 
 
@@ -155,7 +155,7 @@ unsafe fn main() -> ! {
 	device.DMA2.st[0].m1ar.write(|w| w.bits((&buffer2 as *const u16) as u32));
 
 	//	Set number data transer
-	device.DMA2.st[0].ndtr.write(|w| w.bits(buffer_size as u32));
+	device.DMA2.st[0].ndtr.write(|w| w.bits(12 as u32));
 
 	// 	Set channel
 	device.DMA2.st[0].cr.modify(|_, w| w.chsel().bits(0b00));
@@ -231,7 +231,7 @@ unsafe fn main() -> ! {
 		|w|
 			w
 			.cc1s().bits(0b00) // Channel 1 is an output
-			.oc1m().bits(0b001) // 001: Set on match, 010: Toggle
+			.oc1m().bits(0b011) // 001: Set on match, 011: Toggle
 	);
 
 	device.TIM5.ccer.write(
@@ -249,9 +249,17 @@ unsafe fn main() -> ! {
 	
 	// Set auto reload register (1815 ≈ 44100hz)
 	// From where does the time count down from
+	// Reload Value
 	device.TIM5.arr.write(|w| w.bits(0xFFFFFF as u32));
+
+	// Start Count
 	device.TIM5.cnt.write(|w| w.bits(0xFFFFFF as u32));
+
+	// Capture/Compare value
 	device.TIM5.ccr1.write(|w| w.bits(0x0 as u32));
+
+	// Prescaler
+	device.TIM5.psc.write(|w| w.bits(0x0 as u32));
 
 	hprintln!("Done");
 
@@ -269,7 +277,7 @@ unsafe fn main() -> ! {
 	device.ADC1.cr1.modify(
 		|_, w|
 			w.res().bits(0b00) // 12 bit resolution
-			.scan().bit(true)
+			//.scan().bit(true)
 			.eocie().bit(false) // no EOC interrupt
 	);
 
@@ -290,7 +298,7 @@ unsafe fn main() -> ! {
 	device.ADC1.cr2.modify(
 		|_, w|
 			w
-			.cont().bit(true) // Continous Mode
+			//.cont().bit(true) // Continous Mode
 			.exten().bits(0b01) // External trigger. 01: Rising Edge, 00: No ext trigger
 			.extsel().bits(0b1010) // TIM5_CH1 event
 	);
@@ -388,15 +396,21 @@ unsafe fn TIM5() {
 
 #[interrupt]
 unsafe fn DMA2_STREAM0() {
-	hprintln!("Buffer Full");
-	
 	while pacd.is_none() {
 		pacd = pac::Peripherals::take();
 	}
 
 	let device = pacd.as_ref().unwrap();
-	hprintln!("Clear DMA TCIF S0");
-	device.DMA2.lifcr.write(|w| w.ctcif0().bit(true));
+	hprintln!("DMA Stream Full");
+	device.DMA2.lifcr.write(|w| w
+		.ctcif0().bit(true)
+		.chtif0().bit(true)
+	);
+	
+	// LIFCR, bit 4 and 5, clear transfer complete
+	// and half transfer complete flags
+	asm::nop();
+	asm::nop();
 }
 
 // #[interrupt]
