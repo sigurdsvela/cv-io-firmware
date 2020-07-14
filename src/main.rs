@@ -17,54 +17,14 @@ use cortex_m::asm;
 use cortex_m_rt::{entry};
 use cortex_m_semihosting::hprintln;
 
-// use embedded_hal::timer::Cancel;
 use core::ptr;
-
-// use stm32f4xx_hal as hal;
-// use hal::timer;
-// use hal::timer::Timer;
-// use nb;
-// use crate::hal::{prelude::*, stm32};
-
 
 use stm32f4::stm32f446 as pac;
 use pac::{interrupt, NVIC};
 
-// use stm32f4xx_hal::{
-//     prelude::*,
-//     pwm,
-//     gpio::gpioa,
-//     adc::{
-//         Adc,
-//         config::AdcConfig,
-//         config::SampleTime,
-//         config::Sequence,
-//         config::Eoc,
-//         config::Scan,
-//         config::Continuous,
-//         config::Clock,
-//         config::Dma
-//     },
-// };
 
-//#[global_allocator]
-//static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
-
-
-static mut COUNT: u32 = 0;
 
 static mut pacd: Option<pac::Peripherals> = None;
-
-// extern "C" {
-//     static mut __sheap: u8;
-// }
-
-
-//#[alloc_error_handler]
-//fn alloc_err(layout: Layout) -> ! {
-//    hprintln!("Oh oh, memory error").unwrap();
-//    loop {}
-//}
 
 
 fn wait_for<F>(f: F) 
@@ -80,8 +40,6 @@ static mut buffer2: [u16; buffer_size] = [0; buffer_size];
 
 #[entry]
 unsafe fn main() -> ! {
-	//let __sheap_ref: *const u8 = &__sheap as *const u8;
-	//ALLOCATOR.init(__sheap_ref as usize, 1024);
 	hprintln!("Entry");
 
 	hprintln!("Disabling Interrupts");
@@ -267,16 +225,13 @@ unsafe fn main() -> ! {
 	hprintln!("Setup ADC1...");
 
 	// ## ADC 1 INIT ## //
-	device.ADC1.cr2.modify(
-		|_, w|
-			w
-			.align().bit(false) // 1: Right Alignment
-
-	);
+	// 1: Right Alignment
+	device.ADC1.cr2.modify(|_, w| w.align().bit(false));
 
 	device.ADC1.cr1.modify(
 		|_, w|
-			w.res().bits(0b00) // 12 bit resolution
+			w
+			.res().bits(0b00) // 12 bit resolution
 			.scan().bit(true)
 			.eocie().bit(false) // no EOC interrupt
 	);
@@ -292,7 +247,8 @@ unsafe fn main() -> ! {
 	// 111: 480 cycles
 	device.ADC1.smpr2.modify(
 		|_, w|
-			w.smp0().bits(0b011) // 56 cycles for some margin
+			w
+			.smp0().bits(0b011) // 56 cycles for some margin
 			.smp1().bits(0b011) // 56 cycles for some margin
 	);
 
@@ -377,7 +333,6 @@ unsafe fn main() -> ! {
 
 #[interrupt]
 unsafe fn TIM5() {
-	//COUNT += 1;
 	hprintln!("Sample Tick");
 	
 	while pacd.is_none() {
@@ -412,35 +367,4 @@ unsafe fn DMA2_STREAM0() {
 		.ctcif0().bit(true)
 		.chtif0().bit(true)
 	);
-	
-	// LIFCR, bit 4 and 5, clear transfer complete
-	// and half transfer complete flags
-	asm::nop();
-	asm::nop();
 }
-
-// #[interrupt]
-// unsafe fn DMA2_STREAM0() {
-// 	let __sheap_ref: *const u8 = &__sheap as *const u8;
-// 	*(__sheap_ref as *mut u32) = 0xF0F0F0F0;
-
-// 	if let Some(device) = stm32::Peripherals::take() {
-// 		let te = device.DMA2.lisr.read().teif0().bit();
-// 		if te {
-// 			// Todo: Better error handling
-// 			panic!("DMA Transfer Error");
-// 		}
-
-// 		let tc = device.DMA2.lisr.read().tcif0().bit();
-
-// 		if tc {
-// 			// Clear transfer complete intterupt flag
-// 			device.DMA2.lifcr.write(|w| w.ctcif0().bit(true));
-
-// 			let ct = device.DMA2.st[0].cr.read().ct().bit();
-// 			// Get the buffer that is NOT the current target
-// 			let buffer = if ct { /*buffer2*/ } else { /*buffer1*/ };
-// 		}
-		
-// 	}
-// }
