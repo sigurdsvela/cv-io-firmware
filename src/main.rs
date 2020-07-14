@@ -277,7 +277,7 @@ unsafe fn main() -> ! {
 	device.ADC1.cr1.modify(
 		|_, w|
 			w.res().bits(0b00) // 12 bit resolution
-			//.scan().bit(true)
+			.scan().bit(true)
 			.eocie().bit(false) // no EOC interrupt
 	);
 
@@ -307,7 +307,7 @@ unsafe fn main() -> ! {
 	// Define sequence (Single channel)
 	device.ADC1.sqr1.modify(
 		|_, w|
-			w.l().bits(0b0000) // Two conversions
+			w.l().bits(0b0001) // Two conversions
 	);
 
 	// Set input sequence
