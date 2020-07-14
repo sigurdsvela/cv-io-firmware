@@ -1,8 +1,8 @@
 [package]
-authors = ["{{authors}}"]
+authors = ["Sigurd Berg Svela"]
 edition = "2018"
 readme = "README.md"
-name = "{{project-name}}"
+name = "cv_io"
 version = "0.1.0"
 
 [dependencies]
@@ -10,6 +10,18 @@ cortex-m = "0.6.0"
 cortex-m-rt = "0.6.10"
 cortex-m-semihosting = "0.3.3"
 panic-halt = "0.2.0"
+panic-semihosting = ""
+embedded-hal = "0.2"
+#alloc-cortex-m = "0.4.0"
+nb = "0.1.2"
+
+[dependencies.stm32f4]
+features = ["stm32f446", "rt"]
+version = "0.7.1"
+
+[dependencies.stm32f4xx-hal]
+version = "0.8"
+features = ["rt", "stm32f446"] # replace the model of your microcontroller here
 
 # Uncomment for the panic example.
 # panic-itm = "0.4.1"
@@ -26,7 +38,7 @@ panic-halt = "0.2.0"
 
 # this lets you use `cargo fix`!
 [[bin]]
-name = "{{project-name}}"
+name = "cv_io"
 test = false
 bench = false
 

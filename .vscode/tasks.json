@@ -4,18 +4,13 @@
     "version": "2.0.0",
     "tasks": [
         {
-            /*
-             * This is the default cargo build task,
-             * but we need to provide a label for it,
-             * so we can invoke it from the debug launcher.
-             */
             "label": "cargo build",
             "type": "process",
             "command": "cargo",
-            "args": ["build"],
-            "problemMatcher": [
-                "$rustc"
+            "args": [
+                "build"
             ],
+            "problemMatcher": [],
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -25,7 +20,10 @@
             "label": "cargo build --release",
             "type": "process",
             "command": "cargo",
-            "args": ["build", "--release"],
+            "args": [
+                "build",
+                "--release"
+            ],
             "problemMatcher": [
                 "$rustc"
             ],
@@ -35,7 +33,10 @@
             "label": "cargo build --examples",
             "type": "process",
             "command": "cargo",
-            "args": ["build","--examples"],
+            "args": [
+                "build",
+                "--examples"
+            ],
             "problemMatcher": [
                 "$rustc"
             ],
@@ -45,7 +46,11 @@
             "label": "cargo build --examples --release",
             "type": "process",
             "command": "cargo",
-            "args": ["build","--examples", "--release"],
+            "args": [
+                "build",
+                "--examples",
+                "--release"
+            ],
             "problemMatcher": [
                 "$rustc"
             ],
@@ -55,9 +60,11 @@
             "label": "cargo clean",
             "type": "process",
             "command": "cargo",
-            "args": ["clean"],
+            "args": [
+                "clean"
+            ],
             "problemMatcher": [],
             "group": "build"
-        },
+        }
     ]
 }
