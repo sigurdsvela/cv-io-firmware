@@ -73,6 +73,10 @@ fn wait_for<F>(f: F)
 	while !f() {}
 }
 
+const buffer_size: usize = 12;
+static mut buffer1: [u16; buffer_size] = [0; buffer_size];
+static mut buffer2: [u16; buffer_size] = [0; buffer_size];
+
 
 #[entry]
 unsafe fn main() -> ! {
@@ -130,18 +134,14 @@ unsafe fn main() -> ! {
 	// Configure GPIO_A_0 as analog
 	device.GPIOA.moder.modify(
 		|_, w|
-			w.moder0().bits(0b11) // Analog Mode
+			w
+			.moder0().bits(0b11) // Analog Mode
+			.moder1().bits(0b11) // Analog Mode
 	);
 
 
 	// Pointer to ADC data register
 	const ADC_DR: *const u32 = 0x4001204c as *const u32;
-
-	// Allocate buffer
-	const buffer_size: usize = 12;
-	let buffer1: [u16; 12] = [0; 12];
-	let buffer2: [u16; 12] = [0; 12];
-
 
 
 	hprintln!("Setup dma...");
@@ -155,7 +155,7 @@ unsafe fn main() -> ! {
 	device.DMA2.st[0].m1ar.write(|w| w.bits((&buffer2 as *const u16) as u32));
 
 	//	Set number data transer
-	device.DMA2.st[0].ndtr.write(|w| w.bits(12 as u32));
+	device.DMA2.st[0].ndtr.write(|w| w.bits(buffer_size as u32));
 
 	// 	Set channel
 	device.DMA2.st[0].cr.modify(|_, w| w.chsel().bits(0b00));
@@ -199,7 +199,7 @@ unsafe fn main() -> ! {
 	device.ADC_COMMON.ccr.modify(
 		|_, w|
 			w
-			.adcpre().bits(0b11) // Prescalar (8) 11: PCLK2 divided by 8
+			.adcpre().bits(0b00) // Prescalar (8) 11: PCLK2/8, 00: PCLK/2
 			.multi().bits(0b00000) // Indipendent ADC mode
 			.delay().bits(0b0000) // 00: 5 * adc_clk delay
 	);
@@ -293,6 +293,7 @@ unsafe fn main() -> ! {
 	device.ADC1.smpr2.modify(
 		|_, w|
 			w.smp0().bits(0b011) // 56 cycles for some margin
+			.smp1().bits(0b011) // 56 cycles for some margin
 	);
 
 	device.ADC1.cr2.modify(
@@ -306,13 +307,14 @@ unsafe fn main() -> ! {
 	// Define sequence (Single channel)
 	device.ADC1.sqr1.modify(
 		|_, w|
-			w.l().bits(0b0000) // Single channel
+			w.l().bits(0b0000) // Two conversions
 	);
 
 	// Set input sequence
 	device.ADC1.sqr3.modify(
 		|_, w|
-			w.sq1().bits(0b0000) // Single channel
+			w.sq1().bits(0b0000) // channel 0
+			.sq2().bits(0b0001) // channel 1
 	);
 
 	// Enable DMA on ADC
@@ -323,8 +325,6 @@ unsafe fn main() -> ! {
 			.dds().bit(true) // DMA requests are issued as long as data are converted and DMA=
 	);
 
-
-	
 	// Turn on the ADC
 	device.ADC1.cr2.modify(
 		|_, w|
@@ -345,13 +345,14 @@ unsafe fn main() -> ! {
 
 	hprintln!("Enabling interrupts");
 	cortex_m::interrupt::enable();
-	//hprintln!("Interrupts enabled");
+	hprintln!("Interrupts enabled");
 
 
 	// ## DO THINGS ## //
 	loop {
 		asm::nop();
 
+		// TODO: Enable ovr interrupt and move this code
 		if device.ADC1.sr.read().ovr().bit() {
 			device.DMA1.st[0].m0ar.write(|w| { w.bits((&buffer1 as *const u16) as u32) });
 			device.DMA1.st[0].m1ar.write(|w| { w.bits((&buffer2 as *const u16) as u32) });
@@ -359,7 +360,7 @@ unsafe fn main() -> ! {
 			//	Set number data transer
 			device.DMA1.st[0].ndtr.write(|w| w.bits(buffer_size as u32));
 
-			device.ADC1.sr.modify(|r, w| w.ovr().bit(false));
+			device.ADC1.sr.modify(|_, w| w.ovr().bit(false));
 
 			device.ADC1.cr2.modify(
 				|_, w|
@@ -386,6 +387,11 @@ unsafe fn TIM5() {
 	let device = pacd.as_ref().unwrap();
 
 	hprintln!("Remove interrupt flag");
+	hprintln!(
+		"Filling buffer {}. I:{}",
+		if device.DMA2.st[0].cr.read().ct().bit() { 1 } else { 2 },
+		device.DMA2.st[0].ndtr.read().bits()
+	);
 
 	// clear update interrupt flag if set
 	device.TIM5.sr.modify(|_, w| w.uif().bit(false));
